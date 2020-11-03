@@ -1,34 +1,44 @@
 package dev.kidr
 
 @ExperimentalUnsignedTypes
-data class Ip4Address(val decimal: UInt) {
-    override fun toString() = decimal.toUByteArray().joinToString(".")
+data class Ip4Address private constructor(private val uInt: UInt) {
+
+    override fun toString(): String = uInt.toUByteArray().joinToString(".")
+
+    fun toLong(): Long = this.uInt.toLong()
 
     companion object {
-        fun parse(address: String): Ip4Address? {
-            return address
-                .split(".")
-                .mapNotNull(String::toUIntOrNull)
-                .map(UInt::toUByte)
-                .toUByteArray()
-                .toUInt()
-                .let(::Ip4Address)
-        }
+        val MIN_VALUE: Ip4Address = Ip4Address(UInt.MIN_VALUE)
+        val MAX_VALUE: Ip4Address = Ip4Address(UInt.MAX_VALUE)
+
+        fun parseOrNull(address: String): Ip4Address? = address
+            .split(".")
+            .map(String::toUInt)
+            .map(UInt::toUByte)
+            .toUByteArray()
+            .toUInt()
+            .let(::Ip4Address)
+
+        fun parse(address: String): Ip4Address = parseOrNull(address) 
+            ?: throw IllegalArgumentException("Could not parse Ip4Address from: $address")
+
+        fun parseOrNull(address: Long): Ip4Address? = address.toUInt().let(::Ip4Address)
+
+        fun parse(address: Long): Ip4Address? = parseOrNull(address)
+            ?: throw IllegalArgumentException("Could not parse Ip4Address from: $address")
     }
 }
 
 @ExperimentalUnsignedTypes
-internal fun UInt.toUByteArray(): UByteArray {
-    return ubyteArrayOf(
-        this.shr(24).and(255u).toUByte(),
-        this.shr(16).and(255u).toUByte(),
-        this.shr(8).and(255u).toUByte(),
-        this.shr(0).and(255u).toUByte()
-    )
-}
+private fun UInt.toUByteArray(): UByteArray = ubyteArrayOf(
+    this.shr(24).and(255u).toUByte(),
+    this.shr(16).and(255u).toUByte(),
+    this.shr(8).and(255u).toUByte(),
+    this.shr(0).and(255u).toUByte()
+)
 
 @ExperimentalUnsignedTypes
-internal fun UByteArray.toUInt(): UInt {
+private fun UByteArray.toUInt(): UInt {
     var bitCount = size * 8 - 8
     return this
         .sumBy { 255u.and(it.toUInt()).shl(bitCount).also { bitCount -= 8 } }
